@@ -14,4 +14,3 @@ class DuanziItem(scrapy.Item):
     author = scrapy.Field()
     content = scrapy.Field()
     title = scrapy.Field()
-    comment = scrapy.Field()

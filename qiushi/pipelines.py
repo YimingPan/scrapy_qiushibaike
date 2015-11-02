@@ -8,8 +8,6 @@
 
 class QiushiPipeline(object):
     def process_item(self, item, spider):
-        print "Author: %s" % item['author']
-        #print "Title: %s" % item['title']
-        for com in item['comment']:
-            print com
+        #print item['content']
+        #print item['title']
         return item

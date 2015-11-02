@@ -25,18 +25,19 @@ class DuanziSpider(scrapy.Spider):
             if author == []:
                 continue
 
-            item['content'] = content[0].replace('\n', '')
+            item['content'] = '<div class="content">\n' + content[0].replace('\n', '') + '\n</div>'
             item['author'] = author[1].replace('\n', '')
 
+            # 获取评论页面的链接
             comment_page = duanzi.css('ul.clearfix > li.comments > a::attr("href")').extract()
             url = response.urljoin(comment_page[0])
-            request = scrapy.Request(url, headers=self.headers, callback=self.parse_comment)
+            request = scrapy.Request(url, headers=self.headers, callback=self.parse_title)
             request.meta['item'] = item
 
             yield request
 
-    def parse_comment(self, response):
+    def parse_title(self, response):
         item = response.meta['item']
         item['title'] = response.css('title::text').extract()[0].replace('\n', '')
-        item['comment'] = response.xpath('//span[@class="body"]/text()').extract()
+        # item['comment'] = response.xpath('//span[@class="body"]/text()').extract()
         return item
