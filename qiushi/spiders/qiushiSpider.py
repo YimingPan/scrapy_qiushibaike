@@ -29,11 +29,9 @@ class DuanziSpider(scrapy.Spider):
             item['author'] = author[1].replace('\n', '')
 
             comment_page = duanzi.css('ul.clearfix > li.comments > a::attr("href")').extract()
-            #print comment_page.extract()
             url = response.urljoin(comment_page[0])
             request = scrapy.Request(url, headers=self.headers, callback=self.parse_comment)
             request.meta['item'] = item
-            #print item['author']
 
             yield request
 
