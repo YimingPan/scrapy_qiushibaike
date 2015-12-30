@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import scrapy
 from qiushi.items import DuanziItem
-
+import sys
+reload(sys)
+sys.setdefaultencoding( "utf-8" )
 
 class DuanziSpider(scrapy.Spider):
     name = "Duanzi"
@@ -12,25 +14,37 @@ class DuanziSpider(scrapy.Spider):
     }
     
     def start_requests(self):
-        return [scrapy.FormRequest("http://www.qiushibaike.com/textnew",
-                                    headers=self.headers)]
+        # 爬取糗事百科上最新文字版块的全部35个页面
+        requestlist = []
+        for i in range(1, 36):
+            url = "http://www.qiushibaike.com/textnew/page/%d?s=4835373" % i
+            requestlist.append(scrapy.FormRequest(url, headers = self.headers))
+        return requestlist
 
     def parse(self, response):
         data = response.xpath('//div[@class="article block untagged mb15"]')
         for duanzi in data:
             item = DuanziItem()
             content = duanzi.xpath('div[@class="content"]/text()').extract()
-            author = duanzi.xpath('div[@class="author"]/a/text()').extract()
+            author = duanzi.xpath('div[@class="author clearfix"]/a/h2/text()').extract()
 
+            # 有些用户没有用户名，不知是什么原因。过滤掉这些段子。
             if author == []:
                 continue
 
-            item['content'] = '<div class="content">\n' + content[0].replace('\n', '') + '\n</div>'
-            item['author'] = author[1].replace('\n', '')
+            # 糗事百科上的正文内容经常含'<br>'，导致正文被割裂成若干个列表元素。
+            # 将他们逐一提取出来，连接之后再存入content域。
+            t = ''
+            for text in content:
+                if text != '\n':
+                    t = t + text.replace('\n', '') + '\n'
+            item['content'] = t
+            item['author'] = author[0]
 
             # 获取评论页面的链接
             comment_page = duanzi.css('ul.clearfix > li.comments > a::attr("href")').extract()
             url = response.urljoin(comment_page[0])
+            item['href'] = url;
             request = scrapy.Request(url, headers=self.headers, callback=self.parse_title)
             request.meta['item'] = item
 
@@ -39,5 +53,5 @@ class DuanziSpider(scrapy.Spider):
     def parse_title(self, response):
         item = response.meta['item']
         item['title'] = response.css('title::text').extract()[0].replace('\n', '')
-        # item['comment'] = response.xpath('//span[@class="body"]/text()').extract()
+
         return item

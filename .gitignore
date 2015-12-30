@@ -55,3 +55,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Ignore scraped data
+scraped_data/

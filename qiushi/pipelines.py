@@ -4,21 +4,43 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
+
+from scrapy import signals
+from scrapy.exporters import JsonLinesItemExporter
+from datetime import date
 import sys
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
 
 class QiushiPipeline(object):
     def __init__(self):
-        self.fileSql = open(u'items.sql', u'wb')
+        self.files = {}
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        pipeline = cls()
+        crawler.signals.connect(pipeline.spider_opened, signals.spider_opened)
+        crawler.signals.connect(pipeline.spider_closed, signals.spider_closed)
+        return pipeline
+
+    def spider_opened(self, spider):
+        # The file created on Dec20 2015 will be named as "12-20-2015.json"
+        datestr = date.today().strftime("%m-%d-%Y")
+        file = open('scraped_data/%s.json' % datestr, 'w+b')
+        self.files[spider] = file
+        self.exporter = JsonLinesItemExporter(file, ensure_ascii=False)
+        self.exporter.start_exporting()
+
+    def spider_closed(self, spider):
+        self.exporter.finish_exporting()
+        file = self.files.pop(spider)
+        file.close()
 
     def process_item(self, item, spider):
-        #print item['content']
-        #print item['title']
-        data = dict(item)
-        sqlAuthor = u"INSERT INTO tbl_user (username, passwd, nickname, salt) VALUES ('system_糗事百科', 'nologin', '糗事百科', 'nologin');"
-        sqlNews = u"INSERT INTO tbl_news (title, category_id, content, author_id) VALUES ('{title}', (select id from tbl_category where name='段子'), '{content}', (select id from tbl_user where username='system_糗事百科'));".format(**data)
-        line = sqlAuthor + u'\n' + sqlNews + u'\n'
-        self.fileSql.write(line)
+        self.exporter.export_item(item)
+        # print item['author']
+        # print item['title']
+        # print item['content']
+        # print item['href']
 
         return item
